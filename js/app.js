@@ -3,11 +3,17 @@ import { ApiService } from './api.js';
 import { ScannerModule } from './scanner.js';
 import { AuthModule } from './auth.js';
 
-document.addEventListener('DOMContentLoaded', () => {
-  // 1. Cek Sesi Login
-  const session = AuthModule.getSession();
+document.addEventListener('DOMContentLoaded', async () => {
   const loginModal = document.getElementById('login-modal');
+  const syncText = document.getElementById('sync-text');
 
+  // Coba tarik data terbaru dari Spreadsheet (Cloud) terlebih dahulu agar DataGuru ter-update
+  if (syncText) syncText.textContent = 'Memuat Data...';
+  const successFetched = await ApiService.fetchFromCloud();
+  if (syncText) syncText.textContent = successFetched ? 'Online ✓' : 'Offline Mode';
+
+  // Cek Sesi Login yang Aktif
+  const session = AuthModule.getSession();
   if (session) {
     loginModal.classList.add('hidden');
     initAppUI(session);
@@ -19,6 +25,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('login-btn').addEventListener('click', () => {
     const u = document.getElementById('login-user').value;
     const p = document.getElementById('login-pass').value;
+    
+    // Validasi login menggunakan data guru terbaru yang sudah tersinkron
     const res = AuthModule.login(u, p);
     
     if (res.success) {
@@ -37,24 +45,21 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initAppUI(session) {
-  // Tampilkan role di header
   document.getElementById('header-role-title').textContent = session.role === 'admin' ? 'Administrator' : `Guru: ${session.name}`;
 
-  // Tampilkan panel admin jika role admin
   if (session.role === 'admin') {
     document.getElementById('admin-panel').classList.remove('hidden');
     populateGuruSelect();
   }
 
-  // Muat data profil ke form
   const profil = StateManager.getProfil();
   if (profil.namaSekolah) document.getElementById('header-school-name').textContent = profil.namaSekolah;
   document.getElementById('gas-url-input').value = StateManager.getGasUrl();
   document.getElementById('input-nama-guru').value = session.role === 'guru' ? session.name : (profil.namaGuru || '');
   document.getElementById('input-nohp-guru').value = session.username || '';
 
-  // Fitur Ubah Password Mandiri (Guru / Admin)
-  document.getElementById('update-pass-btn').addEventListener('click', () => {
+  // Fitur Ubah Password Mandiri (Guru)
+  document.getElementById('update-pass-btn').addEventListener('click', async () => {
     const newPass = document.getElementById('input-new-pass').value.trim();
     if (newPass.length < 5) {
       alert('Password minimal 5 karakter!');
@@ -63,12 +68,18 @@ function initAppUI(session) {
 
     const state = StateManager.loadState();
     if (session.role === 'admin') {
-      alert('Password admin default tetap admin12345. Gunakan fitur ubah akun jika perlu.');
+      alert('Password admin default tetap admin12345.');
     } else {
       const guru = state.guru.find(g => g.noHp === session.username);
       if (guru) {
         guru.password = newPass;
         StateManager.saveState(state);
+
+        // Sinkronisasi otomatis ke cloud agar spreadsheet ikut terupdate password barunya
+        try {
+          await ApiService.syncToCloud();
+        } catch(e) { console.error("Sync password error:", e); }
+
         const statusEl = document.getElementById('status-pass');
         statusEl.classList.remove('hidden');
         setTimeout(() => statusEl.classList.add('hidden'), 2500);
@@ -77,13 +88,18 @@ function initAppUI(session) {
   });
 
   // Fitur Reset Password Guru oleh Admin
-  document.getElementById('reset-guru-pass-btn').addEventListener('click', () => {
+  document.getElementById('reset-guru-pass-btn').addEventListener('click', async () => {
     const targetNoHp = document.getElementById('select-reset-guru').value;
     const state = StateManager.loadState();
     const guru = state.guru.find(g => g.noHp === targetNoHp);
     if (guru) {
       guru.password = '12345';
       StateManager.saveState(state);
+
+      try {
+        await ApiService.syncToCloud();
+      } catch(e) { console.error("Sync reset error:", e); }
+
       const statusEl = document.getElementById('status-reset');
       statusEl.classList.remove('hidden');
       setTimeout(() => statusEl.classList.add('hidden'), 2500);
@@ -91,12 +107,17 @@ function initAppUI(session) {
   });
 
   // Simpan Profil
-  document.getElementById('save-profile-btn').addEventListener('click', () => {
+  document.getElementById('save-profile-btn').addEventListener('click', async () => {
     const newProfil = {
       namaGuru: document.getElementById('input-nama-guru').value.trim(),
       gasUrl: document.getElementById('gas-url-input').value.trim()
     };
     StateManager.saveProfil(newProfil);
+    
+    try {
+      await ApiService.syncToCloud();
+    } catch(e) {}
+
     const notif = document.getElementById('status-profil');
     notif.classList.remove('hidden');
     setTimeout(() => notif.classList.add('hidden'), 2500);
