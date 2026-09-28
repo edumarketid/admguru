@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aplikasi Guru v1.37 - PWA</title>
+  <title>Aplikasi Guru v1.1.0 - PWA</title>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
@@ -12,10 +12,16 @@
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col justify-between pb-24">
 
-  <!-- HALAMAN LOGIN (Tampil Jika Belum Masuk) -->
+  <!-- HALAMAN LOGIN -->
   <div id="login-modal" class="fixed inset-0 bg-slate-900 z-50 flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl space-y-5 text-center">
-      <div class="w-14 h-14 bg-sky-600 text-white rounded-2xl flex items-center justify-center mx-auto text-2xl shadow-lg shadow-sky-600/40">
+    <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl space-y-5 text-center relative overflow-hidden">
+      
+      <!-- Label Versi Aplikasi di Sudut Kanan Atas Modal Login -->
+      <span class="absolute top-4 right-4 bg-sky-50 text-sky-600 text-[10px] font-bold px-2.5 py-1 rounded-full border border-sky-100">
+        v1.1.0
+      </span>
+
+      <div class="w-14 h-14 bg-sky-600 text-white rounded-2xl flex items-center justify-center mx-auto text-2xl shadow-lg shadow-sky-600/40 mt-1">
         <i class="fa-solid fa-graduation-cap"></i>
       </div>
       <div>
@@ -47,7 +53,7 @@
       <div class="flex items-center space-x-2">
         <div class="w-9 h-9 rounded-full bg-sky-600 text-white flex items-center justify-center font-bold text-lg shadow-md">G</div>
         <div>
-          <h1 class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider" id="header-role-title">Aplikasi Guru</h1>
+          <h1 class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider" id="header-role-title">Aplikasi Guru (v1.1.0)</h1>
           <p id="header-school-name" class="text-xs font-bold text-slate-800">SMK Negeri 1 Wakatobi</p>
         </div>
       </div>
@@ -102,13 +108,13 @@
       </div>
     </div>
 
-    <!-- 4. TAB PROFIL & PENGATURAN KEMANAN -->
+    <!-- 4. TAB PROFIL -->
     <div id="tab-content-profil" class="tab-pane hidden space-y-4">
       <h2 class="font-bold text-slate-800 text-base">Profil & Keamanan Akun</h2>
       
       <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-4">
         
-        <!-- BAGIAN UBAH PASSWORD MANDIRI -->
+        <!-- UBAH PASSWORD MANDIRI -->
         <div class="bg-sky-50/60 p-4 rounded-xl border border-sky-100 space-y-3">
           <h3 class="font-bold text-xs text-sky-900 flex items-center gap-1.5"><i class="fa-solid fa-key"></i> Ubah Password Akun Anda</h3>
           <div>
@@ -121,7 +127,7 @@
           <div id="status-pass" class="text-[11px] font-medium text-emerald-600 text-center hidden">Password berhasil diperbarui!</div>
         </div>
 
-        <!-- PANEL KHUSUS ADMIN (Reset Password Guru) -->
+        <!-- PANEL ADMIN (Reset Password Guru) -->
         <div id="admin-panel" class="bg-amber-50/60 p-4 rounded-xl border border-amber-200 space-y-3 hidden">
           <h3 class="font-bold text-xs text-amber-900 flex items-center gap-1.5"><i class="fa-solid fa-shield-halved"></i> Panel Admin: Reset Password Guru</h3>
           <div>
