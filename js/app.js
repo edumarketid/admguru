@@ -7,12 +7,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const loginModal = document.getElementById('login-modal');
   const syncText = document.getElementById('sync-text');
 
-  // Coba tarik data terbaru dari Spreadsheet (Cloud) terlebih dahulu agar DataGuru ter-update
   if (syncText) syncText.textContent = 'Memuat Data...';
   const successFetched = await ApiService.fetchFromCloud();
   if (syncText) syncText.textContent = successFetched ? 'Online ✓' : 'Offline Mode';
 
-  // Cek Sesi Login yang Aktif
   const session = AuthModule.getSession();
   if (session) {
     loginModal.classList.add('hidden');
@@ -21,12 +19,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     loginModal.classList.remove('hidden');
   }
 
-  // Tombol Submit Login
   document.getElementById('login-btn').addEventListener('click', () => {
     const u = document.getElementById('login-user').value;
     const p = document.getElementById('login-pass').value;
-    
-    // Validasi login menggunakan data guru terbaru yang sudah tersinkron
     const res = AuthModule.login(u, p);
     
     if (res.success) {
@@ -45,83 +40,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function initAppUI(session) {
-  document.getElementById('header-role-title').textContent = session.role === 'admin' ? 'Administrator' : `Guru: ${session.name}`;
+  const roleTitle = session.role === 'admin' ? 'Administrator' : (session.role === 'guru' ? `Guru: ${session.name}` : `Siswa: ${session.name} (${session.kelas})`);
+  document.getElementById('header-role-title').textContent = roleTitle;
 
-  if (session.role === 'admin') {
+  // Jika SISWA login, sesuaikan tampilan Beranda & sembunyikan fitur guru
+  if (session.role === 'siswa') {
+    renderSiswaDashboard(session);
+  } else if (session.role === 'admin') {
     document.getElementById('admin-panel').classList.remove('hidden');
     populateGuruSelect();
   }
-
-  const profil = StateManager.getProfil();
-  if (profil.namaSekolah) document.getElementById('header-school-name').textContent = profil.namaSekolah;
-  document.getElementById('gas-url-input').value = StateManager.getGasUrl();
-  document.getElementById('input-nama-guru').value = session.role === 'guru' ? session.name : (profil.namaGuru || '');
-  document.getElementById('input-nohp-guru').value = session.username || '';
-
-  // Fitur Ubah Password Mandiri (Guru)
-  document.getElementById('update-pass-btn').addEventListener('click', async () => {
-    const newPass = document.getElementById('input-new-pass').value.trim();
-    if (newPass.length < 5) {
-      alert('Password minimal 5 karakter!');
-      return;
-    }
-
-    const state = StateManager.loadState();
-    if (session.role === 'admin') {
-      alert('Password admin default tetap admin12345.');
-    } else {
-      const guru = state.guru.find(g => g.noHp === session.username);
-      if (guru) {
-        guru.password = newPass;
-        StateManager.saveState(state);
-
-        // Sinkronisasi otomatis ke cloud agar spreadsheet ikut terupdate password barunya
-        try {
-          await ApiService.syncToCloud();
-        } catch(e) { console.error("Sync password error:", e); }
-
-        const statusEl = document.getElementById('status-pass');
-        statusEl.classList.remove('hidden');
-        setTimeout(() => statusEl.classList.add('hidden'), 2500);
-      }
-    }
-  });
-
-  // Fitur Reset Password Guru oleh Admin
-  document.getElementById('reset-guru-pass-btn').addEventListener('click', async () => {
-    const targetNoHp = document.getElementById('select-reset-guru').value;
-    const state = StateManager.loadState();
-    const guru = state.guru.find(g => g.noHp === targetNoHp);
-    if (guru) {
-      guru.password = '12345';
-      StateManager.saveState(state);
-
-      try {
-        await ApiService.syncToCloud();
-      } catch(e) { console.error("Sync reset error:", e); }
-
-      const statusEl = document.getElementById('status-reset');
-      statusEl.classList.remove('hidden');
-      setTimeout(() => statusEl.classList.add('hidden'), 2500);
-    }
-  });
-
-  // Simpan Profil
-  document.getElementById('save-profile-btn').addEventListener('click', async () => {
-    const newProfil = {
-      namaGuru: document.getElementById('input-nama-guru').value.trim(),
-      gasUrl: document.getElementById('gas-url-input').value.trim()
-    };
-    StateManager.saveProfil(newProfil);
-    
-    try {
-      await ApiService.syncToCloud();
-    } catch(e) {}
-
-    const notif = document.getElementById('status-profil');
-    notif.classList.remove('hidden');
-    setTimeout(() => notif.classList.add('hidden'), 2500);
-  });
 
   // Navigasi Tab
   const navButtons = document.querySelectorAll('.nav-btn');
@@ -139,7 +67,9 @@ function initAppUI(session) {
     });
   });
 
-  ScannerModule.init();
+  if (session.role !== 'siswa') {
+    ScannerModule.init();
+  }
 
   document.getElementById('sync-btn').addEventListener('click', async () => {
     const syncText = document.getElementById('sync-text');
@@ -153,16 +83,54 @@ function initAppUI(session) {
   });
 }
 
-function populateGuruSelect() {
+function renderSiswaDashboard(session) {
+  const mainContainer = document.querySelector('main');
   const state = StateManager.loadState();
-  const select = document.getElementById('select-reset-guru');
-  select.innerHTML = '';
-  if (state.guru) {
-    state.guru.forEach(g => {
-      const opt = document.createElement('option');
-      opt.value = g.noHp;
-      opt.textContent = `${g.namaGuru} (${g.noHp})`;
-      select.appendChild(opt);
-    });
-  }
+  const kehadiranSiswa = state.kehadiran.filter(k => k.idSiswa === session.idSiswa || k.nisn === session.username);
+
+  mainContainer.innerHTML = `
+    <!-- DASHBOARD KHUSUS SISWA -->
+    <div class="space-y-6">
+      <div class="bg-gradient-to-br from-indigo-600 to-sky-600 text-white p-5 rounded-2xl shadow-lg relative overflow-hidden space-y-3">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-xs text-indigo-100 font-medium">Portal Siswa v1.1.0</p>
+            <h2 class="text-xl font-bold mt-0.5">${session.name}</h2>
+          </div>
+          <span class="bg-white/20 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-sm">${session.kelas}</span>
+        </div>
+        <div class="pt-3 border-t border-white/15 flex justify-between text-xs">
+          <span>NISN: <b>${session.username}</b></span>
+          <span>Total Hadir: <b class="text-emerald-300">${kehadiranSiswa.length} Pertemuan</b></span>
+        </div>
+      </div>
+
+      <!-- KARTU QR CODE DIGITAL SISWA -->
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 text-center space-y-3">
+        <h3 class="font-bold text-slate-800 text-sm">Kartu Presensi Digital</h3>
+        <p class="text-xs text-slate-400">Tunjukkan QR Code ini kepada guru saat masuk kelas</p>
+        <div class="w-40 h-40 bg-slate-100 border-2 border-dashed border-slate-300 rounded-2xl mx-auto flex flex-col items-center justify-center p-2">
+          <i class="fa-solid fa-qrcode text-5xl text-sky-600 mb-1"></i>
+          <span class="text-[11px] font-bold text-slate-700">${session.idSiswa || session.username}</span>
+        </div>
+      </div>
+
+      <!-- RIWAYAT KEHADIRAN PRIBADI -->
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-3">
+        <h3 class="font-bold text-slate-800 text-xs uppercase tracking-wider">Riwayat Kehadiran Terbaru</h3>
+        <div class="space-y-2">
+          ${kehadiranSiswa.length === 0 ? '<p class="text-xs text-slate-400 text-center py-4">Belum ada catatan kehadiran.</p>' : 
+            kehadiranSiswa.map(k => `
+              <div class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
+                <div>
+                  <p class="font-bold text-slate-700">${k.tanggal}</p>
+                  <p class="text-[10px] text-slate-400">${k.catatan || 'Scan Presensi'}</p>
+                </div>
+                <span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full font-bold text-[10px]">${k.status}</span>
+              </div>
+            `).join('')}
+        </div>
+      </div>
+    </div>
+  `;
 }
