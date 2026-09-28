@@ -5,28 +5,38 @@ export const AuthModule = {
     username = username.trim();
     password = password.trim();
 
-    // Cek Login Admin Default
+    // 1. Cek Admin
     if (username === 'admin' && password === 'admin12345') {
-      const adminSession = { role: 'admin', name: 'Administrator', username: 'admin' };
-      localStorage.setItem('ACTIVE_SESSION', JSON.stringify(adminSession));
+      const session = { role: 'admin', name: 'Administrator', username: 'admin' };
+      localStorage.setItem('ACTIVE_SESSION', JSON.stringify(session));
       return { success: true, role: 'admin' };
     }
 
-    // Cek Login Guru dari Data Guru
     const state = StateManager.loadState();
-    if (!state.guru) state.guru = [];
 
+    // 2. Cek Guru (via No. HP)
+    if (!state.guru) state.guru = [];
     const guru = state.guru.find(g => g.noHp === username);
     if (guru) {
-      const storedPass = guru.password || '12345';
-      if (storedPass === password) {
-        const guruSession = { role: 'guru', name: guru.namaGuru, username: guru.noHp, nip: guru.nip };
-        localStorage.setItem('ACTIVE_SESSION', JSON.stringify(guruSession));
+      if ((guru.password || '12345') === password) {
+        const session = { role: 'guru', name: guru.namaGuru, username: guru.noHp, nip: guru.nip, mapel: guru.mapel };
+        localStorage.setItem('ACTIVE_SESSION', JSON.stringify(session));
         return { success: true, role: 'guru' };
       }
     }
 
-    return { success: false, message: 'Nomor HP atau Password salah!' };
+    // 3. Cek Siswa (via NISN)
+    if (!state.siswa) state.siswa = [];
+    const siswa = state.siswa.find(s => s.nisn === username);
+    if (siswa) {
+      if ((siswa.password || '12345') === password) {
+        const session = { role: 'siswa', name: siswa.nama, username: siswa.nisn, nis: siswa.nis, kelas: siswa.kelas, idSiswa: siswa.idSiswa };
+        localStorage.setItem('ACTIVE_SESSION', JSON.stringify(session));
+        return { success: true, role: 'siswa' };
+      }
+    }
+
+    return { success: false, message: 'ID/NISN atau Password salah!' };
   },
 
   getSession() {
