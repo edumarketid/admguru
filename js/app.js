@@ -43,6 +43,10 @@ function initAppUI(session) {
     renderSiswaDashboard(session);
   } else {
     renderGuruDashboard(session);
+    if (session.role === 'admin') {
+      document.getElementById('admin-panel').classList.remove('hidden');
+      populateGuruSelect();
+    }
   }
 
   // Navigasi Tab
@@ -58,7 +62,10 @@ function initAppUI(session) {
     });
   });
 
-  if (session.role === 'guru') ScannerModule.init();
+  // Inisialisasi Scanner Kamera Fisik (Hanya untuk Guru/Admin)
+  if (session.role !== 'siswa') {
+    ScannerModule.init();
+  }
 
   document.getElementById('sync-btn').addEventListener('click', async () => {
     document.getElementById('sync-text').textContent = 'Syncing...';
@@ -68,127 +75,118 @@ function initAppUI(session) {
 }
 
 function renderSiswaDashboard(session) {
-  const main = document.querySelector('main');
+  const berandaTab = document.getElementById('tab-content-beranda');
+  const jadwalTab = document.getElementById('tab-content-jadwal');
+  const kelasTab = document.getElementById('tab-content-kelas');
+  const profilTab = document.getElementById('tab-content-profil');
+
   const state = StateManager.loadState();
-  
-  // Ambil jadwal kelas siswa
   const jadwalKelas = state.jadwal.filter(j => j.kelas === session.kelas);
-  // Ambil tugas untuk kelas siswa
   const tugasKelas = state.tugas.filter(t => t.kelas === session.kelas);
-  // Ambil materi untuk kelas siswa
   const materiKelas = state.materi.filter(m => m.kelas === session.kelas);
-  // Ambil inbox untuk siswa
   const inboxSiswa = state.inbox.filter(i => i.penerimaRole === 'siswa' || i.target === session.kelas);
 
-  main.innerHTML = `
-    <!-- BERANDA SISWA -->
-    <div id="tab-content-beranda" class="tab-pane space-y-6">
-      <div class="bg-gradient-to-br from-indigo-600 to-sky-600 text-white p-5 rounded-2xl shadow-lg space-y-2">
-        <p class="text-xs text-indigo-100">Portal Siswa Terpadu v1.1.0</p>
-        <h2 class="text-xl font-bold">${session.name}</h2>
-        <p class="text-xs">Kelas: <b>${session.kelas}</b> | NISN: <b>${session.username}</b></p>
-      </div>
+  // 1. Render Beranda Siswa
+  berandaTab.innerHTML = `
+    <div class="bg-gradient-to-br from-indigo-600 to-sky-600 text-white p-5 rounded-2xl shadow-lg space-y-2">
+      <p class="text-xs text-indigo-100">Portal Siswa Terpadu v1.1.0</p>
+      <h2 class="text-xl font-bold">${session.name}</h2>
+      <p class="text-xs">Kelas: <b>${session.kelas}</b> | NISN: <b>${session.username}</b></p>
+    </div>
 
-      <!-- KARTU QR DIGITAL -->
-      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 text-center space-y-2">
-        <h3 class="font-bold text-slate-800 text-xs">Kartu Presensi QR Code</h3>
-        <div class="w-32 h-32 bg-slate-100 border-2 border-dashed border-slate-300 rounded-xl mx-auto flex flex-col items-center justify-center p-2">
-          <i class="fa-solid fa-qrcode text-4xl text-sky-600 mb-1"></i>
-          <span class="text-[10px] font-bold text-slate-700">${session.idSiswa || session.username}</span>
-        </div>
-      </div>
-
-      <!-- GURU MAPEL TERKAIT (DENGAN TOMBOL WHATSAPP) -->
-      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-3">
-        <h3 class="font-bold text-slate-800 text-xs uppercase tracking-wider">Guru Pengampu & Kontak WA</h3>
-        <div class="space-y-2">
-          ${jadhavUnikGuru(jadwalKelas).map(g => `
-            <div class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
-              <div>
-                <p class="font-bold text-slate-700">${g.namaGuru}</p>
-                <p class="text-[11px] text-sky-600 font-medium">${g.mapel}</p>
-                <p class="text-[10px] text-slate-400"><i class="fa-solid fa-phone mr-1"></i>${g.noHpGuru || '-'}</p>
-              </div>
-              ${g.noHpGuru ? `
-                <a href="https://wa.me/${g.noHpGuru}?text=Halo%20${encodeURIComponent(g.namaGuru)},%20saya%20${encodeURIComponent(session.name)}%20dari%20kelas%20${encodeURIComponent(session.kelas)}" target="_blank" class="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1 shadow-sm transition">
-                  <i class="fa-brands fa-whatsapp text-sm"></i> WA
-                </a>` : ''}
-            </div>
-          `).join('')}
-        </div>
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 text-center space-y-2">
+      <h3 class="font-bold text-slate-800 text-xs">Kartu Presensi QR Code</h3>
+      <div class="w-32 h-32 bg-slate-100 border-2 border-dashed border-slate-300 rounded-xl mx-auto flex flex-col items-center justify-center p-2">
+        <i class="fa-solid fa-qrcode text-4xl text-sky-600 mb-1"></i>
+        <span class="text-[10px] font-bold text-slate-700">${session.idSiswa || session.username}</span>
       </div>
     </div>
 
-    <!-- JADWAL SISWA -->
-    <div id="tab-content-jadwal" class="tab-pane hidden space-y-4">
-      <h2 class="font-bold text-slate-800 text-base">Jadwal Pelajaran Kelas ${session.kelas}</h2>
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-3">
+      <h3 class="font-bold text-slate-800 text-xs uppercase tracking-wider">Guru Pengampu & Kontak WA</h3>
       <div class="space-y-2">
-        ${jadwalKelas.length === 0 ? '<p class="text-xs text-slate-400 text-center py-6">Belum ada jadwal.</p>' :
-          jadwalKelas.map(j => `
-            <div class="bg-white p-4 rounded-xl border border-slate-100 flex justify-between items-center text-xs">
-              <div>
-                <span class="bg-sky-50 text-sky-700 px-2 py-0.5 rounded font-bold text-[10px]">${j.hari} -${j.jam}</span>
-                <h4 class="font-bold text-slate-800 mt-1">${j.mapel}</h4>
-                <p class="text-slate-400 text-[11px]">${j.namaGuru}</p>
-              </div>
+        ${jadhavUnikGuru(jadwalKelas).map(g => `
+          <div class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
+            <div>
+              <p class="font-bold text-slate-700">${g.namaGuru}</p>
+              <p class="text-[11px] text-sky-600 font-medium">${g.mapel}</p>
+              <p class="text-[10px] text-slate-400"><i class="fa-solid fa-phone mr-1"></i>${g.noHpGuru || '-'}</p>
             </div>
-          `).join('')}
+            ${g.noHpGuru ? `
+              <a href="https://wa.me/${g.noHpGuru}?text=Halo%20${encodeURIComponent(g.namaGuru)},%20saya%20${encodeURIComponent(session.name)}%20dari%20kelas%20${encodeURIComponent(session.kelas)}" target="_blank" class="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1 shadow-sm transition">
+                <i class="fa-brands fa-whatsapp text-sm"></i> WA
+              </a>` : ''}
+          </div>
+        `).join('')}
       </div>
     </div>
+  `;
 
-    <!-- KELAS / MATERI & TUGAS SISWA -->
-    <div id="tab-content-kelas" class="tab-pane hidden space-y-5">
-      <div class="space-y-3">
-        <h2 class="font-bold text-slate-800 text-base">Materi & Tugas Pembelajaran</h2>
-        
-        <!-- Daftar Tugas -->
-        <div class="space-y-2">
-          <p class="text-xs font-bold text-slate-500">Tugas Aktif</p>
-          ${tugasKelas.length === 0 ? '<p class="text-xs text-slate-400">Tidak ada tugas aktif.</p>' :
-            tugasKelas.map(t => `
-              <div class="bg-amber-50/60 p-4 rounded-xl border border-amber-200 text-xs space-y-1.5">
-                <div class="flex justify-between font-bold text-amber-900">
-                  <span>${t.judulTugas} (${t.mapel})</span>
-                  <span class="text-[10px] bg-amber-200 text-amber-800 px-2 py-0.5 rounded">Deadline: ${t.deadline}</span>
-                </div>
-                <p class="text-slate-600">${t.deskripsi}</p>
-                <p class="text-[10px] text-slate-400">Oleh: ${t.namaGuru}</p>
-              </div>
-            `).join('')}
-        </div>
-
-        <!-- Daftar Materi -->
-        <div class="space-y-2 pt-2">
-          <p class="text-xs font-bold text-slate-500">Materi Pelajaran</p>
-          ${materiKelas.length === 0 ? '<p class="text-xs text-slate-400">Belum ada materi.</p>' :
-            materiKelas.map(m => `
-              <div class="bg-white p-3 rounded-xl border border-slate-100 flex justify-between items-center text-xs">
-                <div>
-                  <p class="font-bold text-slate-800">${m.judul} (${m.mapel})</p>
-                  <p class="text-[10px] text-slate-400">Oleh: ${m.namaGuru}</p>
-                </div>
-                ${m.linkMateri ? `<a href="${m.linkMateri}" target="_blank" class="bg-sky-50 text-sky-600 px-3 py-1.5 rounded-lg font-bold text-[11px]">Buka</a>` : ''}
-              </div>
-            `).join('')}
-        </div>
-      </div>
+  // 2. Render Jadwal Siswa
+  jadwalTab.innerHTML = `
+    <h2 class="font-bold text-slate-800 text-base">Jadwal Pelajaran Kelas ${session.kelas}</h2>
+    <div class="space-y-2">
+      ${jadwalKelas.length === 0 ? '<p class="text-xs text-slate-400 text-center py-6">Belum ada jadwal.</p>' :
+        jadwalKelas.map(j => `
+          <div class="bg-white p-4 rounded-xl border border-slate-100 flex justify-between items-center text-xs">
+            <div>
+              <span class="bg-sky-50 text-sky-700 px-2 py-0.5 rounded font-bold text-[10px]">${j.hari} -${j.jam}</span>
+              <h4 class="font-bold text-slate-800 mt-1">${j.mapel}</h4>
+              <p class="text-slate-400 text-[11px]">${j.namaGuru}</p>
+            </div>
+          </div>
+        `).join('')}
     </div>
+  `;
 
-    <!-- PROFIL / INBOX SISWA -->
-    <div id="tab-content-profil" class="tab-pane hidden space-y-4">
-      <h2 class="font-bold text-slate-800 text-base">Inbox & Pemberitahuan</h2>
+  // 3. Render Kelas (Materi & Tugas) Siswa
+  kelasTab.innerHTML = `
+    <div class="space-y-4">
+      <h2 class="font-bold text-slate-800 text-base">Materi & Tugas Pembelajaran</h2>
       <div class="space-y-2">
-        ${inboxSiswa.length === 0 ? '<p class="text-xs text-slate-400 text-center py-6">Tidak ada pesan baru.</p>' :
-          inboxSiswa.map(i => `
-            <div class="bg-white p-4 rounded-xl border border-slate-100 text-xs space-y-1">
-              <div class="font-bold text-slate-800 flex justify-between">
-                <span><i class="fa-solid fa-envelope text-sky-600 mr-1"></i> ${i.judul}</span>
-                <span class="text-[10px] text-slate-400">${i.tanggal}</span>
+        <p class="text-xs font-bold text-slate-500">Tugas Aktif</p>
+        ${tugasKelas.length === 0 ? '<p class="text-xs text-slate-400">Tidak ada tugas aktif.</p>' :
+          tugasKelas.map(t => `
+            <div class="bg-amber-50/60 p-4 rounded-xl border border-amber-200 text-xs space-y-1.5">
+              <div class="flex justify-between font-bold text-amber-900">
+                <span>${t.judulTugas} (${t.mapel})</span>
+                <span class="text-[10px] bg-amber-200 text-amber-800 px-2 py-0.5 rounded">Deadline: ${t.deadline}</span>
               </div>
-              <p class="text-slate-600">${i.pesan}</p>
+              <p class="text-slate-600">${t.deskripsi}</p>
+              <p class="text-[10px] text-slate-400">Oleh: ${t.namaGuru}</p>
             </div>
           `).join('')}
       </div>
+      <div class="space-y-2 pt-2">
+        <p class="text-xs font-bold text-slate-500">Materi Pelajaran</p>
+        ${materiKelas.length === 0 ? '<p class="text-xs text-slate-400">Belum ada materi.</p>' :
+          materiKelas.map(m => `
+            <div class="bg-white p-3 rounded-xl border border-slate-100 flex justify-between items-center text-xs">
+              <div>
+                <p class="font-bold text-slate-800">${m.judul} (${m.mapel})</p>
+                <p class="text-[10px] text-slate-400">Oleh: ${m.namaGuru}</p>
+              </div>
+              ${m.linkMateri ? `<a href="${m.linkMateri}" target="_blank" class="bg-sky-50 text-sky-600 px-3 py-1.5 rounded-lg font-bold text-[11px]">Buka</a>` : ''}
+            </div>
+          `).join('')}
+      </div>
+    </div>
+  `;
+
+  // 4. Render Profil / Inbox Siswa
+  profilTab.innerHTML = `
+    <h2 class="font-bold text-slate-800 text-base">Inbox & Pemberitahuan</h2>
+    <div class="space-y-2">
+      ${inboxSiswa.length === 0 ? '<p class="text-xs text-slate-400 text-center py-6">Tidak ada pesan baru.</p>' :
+        inboxSiswa.map(i => `
+          <div class="bg-white p-4 rounded-xl border border-slate-100 text-xs space-y-1">
+            <div class="font-bold text-slate-800 flex justify-between">
+              <span><i class="fa-solid fa-envelope text-sky-600 mr-1"></i> ${i.judul}</span>
+              <span class="text-[10px] text-slate-400">${i.tanggal}</span>
+            </div>
+            <p class="text-slate-600">${i.pesan}</p>
+          </div>
+        `).join('')}
     </div>
   `;
 }
@@ -200,7 +198,6 @@ function jadhavUnikGuru(jadwalList) {
 }
 
 function renderGuruDashboard(session) {
-  // Tampilan Guru (Menu Upload Tugas & Materi)
   const tabKelas = document.getElementById('tab-content-kelas');
   tabKelas.innerHTML = `
     <h2 class="font-bold text-slate-800 text-base">Upload Materi & Tugas Pembelajaran</h2>
@@ -255,7 +252,6 @@ function renderGuruDashboard(session) {
       state.tugas.push({ idTugas: 'T_' + Date.now(), mapel, kelas, judulTugas: judul, deskripsi: desc, deadline: '7 Hari', namaGuru: session.name, tanggal: today });
     }
 
-    // Buat otomatis pesan Inbox untuk siswa di kelas tersebut
     state.inbox.push({
       idPesan: 'MSG_' + Date.now(),
       penerimaRole: 'siswa',
@@ -272,4 +268,19 @@ function renderGuruDashboard(session) {
     stat.classList.remove('hidden');
     setTimeout(() => stat.classList.add('hidden'), 2500);
   });
+}
+
+function populateGuruSelect() {
+  const state = StateManager.loadState();
+  const select = document.getElementById('select-reset-guru');
+  if(!select) return;
+  select.innerHTML = '';
+  if (state.guru) {
+    state.guru.forEach(g => {
+      const opt = document.createElement('option');
+      opt.value = g.noHp;
+      opt.textContent = `${g.namaGuru} (${g.noHp})`;
+      select.appendChild(opt);
+    });
+  }
 }
