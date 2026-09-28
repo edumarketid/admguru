@@ -15,15 +15,12 @@
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col justify-between pb-24">
 
-  <!-- HALAMAN LOGIN (Multi-Peran: Admin, Guru, Siswa) -->
+  <!-- HALAMAN LOGIN -->
   <div id="login-modal" class="fixed inset-0 bg-slate-900 z-50 flex items-center justify-center p-4">
     <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl space-y-5 text-center relative overflow-hidden">
-      
-      <!-- Label Versi Aplikasi -->
       <span class="absolute top-4 right-4 bg-sky-50 text-sky-600 text-[10px] font-bold px-2.5 py-1 rounded-full border border-sky-100">
         v1.1.0
       </span>
-
       <div class="w-14 h-14 bg-sky-600 text-white rounded-2xl flex items-center justify-center mx-auto text-2xl shadow-lg shadow-sky-600/40 mt-1">
         <i class="fa-solid fa-graduation-cap"></i>
       </div>
@@ -31,7 +28,6 @@
         <h2 class="text-lg font-bold text-slate-800">Login Aplikasi</h2>
         <p class="text-xs text-slate-400 mt-0.5">SMK Negeri 1 Wakatobi</p>
       </div>
-
       <div class="space-y-3 text-left">
         <div>
           <label class="block text-xs font-bold text-slate-700 mb-1">No. HP (Guru) / NISN (Siswa) / 'admin'</label>
@@ -43,7 +39,6 @@
         </div>
         <div id="login-error" class="text-xs text-rose-600 font-semibold text-center hidden"></div>
       </div>
-
       <button id="login-btn" class="w-full bg-sky-600 hover:bg-sky-700 active:scale-95 text-white font-bold py-3 rounded-xl text-xs shadow-md shadow-sky-600/30 transition">
         Masuk Aplikasi
       </button>
@@ -116,8 +111,6 @@
       <h2 class="font-bold text-slate-800 text-base">Profil & Keamanan Akun</h2>
       
       <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-4">
-        
-        <!-- UBAH PASSWORD MANDIRI -->
         <div class="bg-sky-50/60 p-4 rounded-xl border border-sky-100 space-y-3">
           <h3 class="font-bold text-xs text-sky-900 flex items-center gap-1.5"><i class="fa-solid fa-key"></i> Ubah Password Akun Anda</h3>
           <div>
@@ -130,7 +123,6 @@
           <div id="status-pass" class="text-[11px] font-medium text-emerald-600 text-center hidden">Password berhasil diperbarui!</div>
         </div>
 
-        <!-- PANEL ADMIN (Reset Password Guru) -->
         <div id="admin-panel" class="bg-amber-50/60 p-4 rounded-xl border border-amber-200 space-y-3 hidden">
           <h3 class="font-bold text-xs text-amber-900 flex items-center gap-1.5"><i class="fa-solid fa-shield-halved"></i> Panel Admin: Reset Password Guru</h3>
           <div>
@@ -194,7 +186,7 @@
     </div>
   </footer>
 
-  <!-- MODAL SCANNER QR -->
+  <!-- MODAL SCANNER QR (Wajib ada di index.html agar modul scanner.js aktif) -->
   <div id="qr-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 hidden flex flex-col items-center justify-center p-4">
     <div class="bg-white w-full max-w-sm rounded-2xl p-5 text-center relative shadow-2xl space-y-3">
       <div class="flex justify-between items-center">
